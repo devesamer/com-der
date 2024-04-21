@@ -1,0 +1,16 @@
+aiofiles
+dnspython
+motor
+pymongo
+Telethon
+tgcrypto
+cryptg
+ffmpeg-python
+heroku3
+aiohttp
+Flask
+ffmpeg
+requests
+gunicorn
+tgcrypto
+https://github.com/samerastanboly/ethon/archive/refs/heads/main.zip
