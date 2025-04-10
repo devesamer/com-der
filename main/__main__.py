@@ -3,7 +3,10 @@ from telethon import Button
 from telethon import events
 from telethon.tl.functions.messages import EditMessageRequest
 from telethon.tl.custom.message import Message
-
+import os
+import re
+import math
+import asyncio
 from main.database import db
 from main.client import bot
 from main.config import Config
