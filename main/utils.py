@@ -16,7 +16,7 @@ from main.config import Config
 from main.database import db
 
 
-async def compress(event, msg, cmd=0):
+async def compress(event):
     msg: Message = event.message
     attributes = msg.media.document.attributes
     mime_type = msg.media.document.mime_type
@@ -45,11 +45,28 @@ async def compress(event, msg, cmd=0):
 
     FT = time()
     progress = f"progress-{FT}.txt"
-    fps = f" -r {db.fps}" if db.fps else ""
-    cmd = (f'ffmpeg -hide_banner -loglevel quiet'
-           f' -progress {progress} -i """{in_path}"""'
-           f' -preset {db.speed} -vcodec libx265 -crf {db.crf}'
-           f'{fps} -acodec copy -c:s copy """{out_path}""" -y')
+fps = f" -r {db.fps}" if db.fps else ""
+width = getattr(db, 'width', None)
+height = getattr(db, 'height', None)
+scale_option = ""
+if width is not None and height is not None:
+    scale_option = f' -vf scale={width}:{height}'
+elif hasattr(db, 'resolution'):
+    resolution = db.resolution
+    if resolution == '240p':
+        scale_option = ' -vf scale=426:240'
+    elif resolution == '360p':
+        scale_option = ' -vf scale=640:360'
+    elif resolution == '480p':
+        scale_option = ' -vf scale=854:480'
+    elif resolution == '720p':
+        scale_option = ' -vf scale=1280:720'
+    elif resolution == '1080p':
+        scale_option = ' -vf scale=1920:1080'
+cmd = (f'ffmpeg -hide_banner -loglevel quiet'
+       f' -progress {progress} -i """{in_path}"""'
+       f' -preset {db.speed} -vcodec libx265 -crf {db.crf}'
+       f'{fps}{scale_option} -acodec copy -c:s copy """{out_path}""" -y')
     try:
         await ffmpeg_progress(cmd, in_path, progress, FT, edit)
     except Exception as e:
@@ -149,4 +166,3 @@ def humanbytes(size):
             break
         size /= 1024
     return f"{size:.2f} {unit}"
-    
