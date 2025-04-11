@@ -9,7 +9,6 @@ ffmpeg-python
 heroku3
 aiohttp
 Flask
-ffmpeg
 requests
 gunicorn
 tgcrypto
