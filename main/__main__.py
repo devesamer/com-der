@@ -74,8 +74,8 @@ async def compression_type_callback(event):
         [Button.inline("Back to Settings", data=f"back_to_settings:{video_message_id}")]
     ]
     text = "Select the desired compression quality/speed:"
-    await update_settings_message(event, text, buttons)
-
+    await bot.send_message(user_id, text, buttons=buttons, reply_to=video_message_id)
+    await event.answer()
 
 @bot.on(events.CallbackQuery(pattern=r"set_speed:(.+):(\d+)"))
 async def set_speed_callback(event):
@@ -85,7 +85,7 @@ async def set_speed_callback(event):
 
     if user_id in user_settings and user_settings[user_id]["video_message_id"] == video_message_id:
         user_settings[user_id]["speed"] = speed
-        await event.answer(f"Compression speed set to: {speed}")
+        await event.answer(f"Compression speed set to: {speed.replace('fast', ' Fast').title()}")
         await send_settings_keyboard(user_id, await bot.get_messages(event.chat_id, ids=video_message_id))
     else:
         await event.answer("Invalid operation.")
@@ -105,8 +105,8 @@ async def resolution_callback(event):
         [Button.inline("Back to Settings", data=f"back_to_settings:{video_message_id}")]
     ]
     text = "Select the desired resolution:"
-    await update_settings_message(event, text, buttons)
-
+    await bot.send_message(user_id, text, buttons=buttons, reply_to=video_message_id)
+    await event.answer()
 
 @bot.on(events.CallbackQuery(pattern=r"set_resolution:(.+):(\d+)"))
 async def set_resolution_callback(event):
@@ -135,8 +135,8 @@ async def fps_select_callback(event):
         [Button.inline("Back to Settings", data=f"back_to_settings:{video_message_id}")]
     ]
     text = "Select the desired frames per second (FPS):"
-    await update_settings_message(event, text, buttons)
-
+    await bot.send_message(user_id, text, buttons=buttons, reply_to=video_message_id)
+    await event.answer()
 
 @bot.on(events.CallbackQuery(pattern=r"set_fps:(.+):(\d+)"))
 async def set_fps_callback(event):
@@ -166,8 +166,8 @@ async def crf_select_callback(event):
         [Button.inline("Back to Settings", data=f"back_to_settings:{video_message_id}")]
     ]
     text = "Select the Constant Rate Factor (CRF) value:\nLower values mean higher quality and larger file size."
-    await update_settings_message(event, text, buttons)
-
+    await bot.send_message(user_id, text, buttons=buttons, reply_to=video_message_id)
+    await event.answer()
 
 @bot.on(events.CallbackQuery(pattern=r"set_crf:(\d+):(\d+)"))
 async def set_crf_callback(event):
@@ -187,7 +187,10 @@ async def set_crf_callback(event):
 async def back_to_settings_callback(event):
     user_id = event.sender_id
     video_message_id = int(event.pattern_match.group(1))
-    await send_settings_keyboard(user_id, await bot.get_messages(event.chat_id, ids=video_message_id))
+    original_message = await bot.get_messages(event.chat_id, ids=video_message_id)
+    if original_message:
+        await send_settings_keyboard(user_id, original_message)
+    await event.answer()
 
 
 @bot.on(events.CallbackQuery(pattern=r"start_compress:(\d+)"))
@@ -210,14 +213,17 @@ async def start_compress_callback(event):
             # Remove settings buttons
             await event.edit("Processing video...", buttons=[])
             db.tasks += 1
+            logging.info(f"Starting compression with settings: {settings}")
             await compress(event, settings["speed"], settings["resolution"], settings["fps"], settings["crf"])
+            logging.info("Compression process initiated.")
         except Exception as e:
-            logging.error(f"Error during compression: {e}")
+            logging.error(f"Error during compression initiation: {e}")
             await bot.send_message(event.chat_id, "An error occurred during video compression.")
         finally:
             db.tasks -= 1
             if user_id in user_settings:
                 del user_settings[user_id]
+            logging.info(f"User settings for {user_id} cleared.")
     else:
         await event.answer("Invalid operation or settings expired.")
 
@@ -280,7 +286,6 @@ async def callback_handler(event):
         return
     # Existing callback handlers for settings menu
     if event.data == b"settings":
-        # await settings_handler(event)
         await settingscallback(event)
     elif event.data == b"compress":
         await compresscallback(event)
@@ -292,29 +297,18 @@ async def callback_handler(event):
         await backoptionscallback(event)
     elif event.data == b"back_compress":
         await backcompresscallback(event)
-    elif event.data == b"ultrafast":
-        await ultrafastcallback(event)
-    elif event.data == b"veryfast":
-        await veryfastcallback(event)
-    elif event.data == b"faster":
-        await fastercallback(event)
-    elif event.data == b"fast":
-        await fastcallback(event)
-    elif event.data == b"medium":
-        await mediumcallback(event)
-    elif event.data == b"slow":
-        await slowcallback(event)
+    # No need for individual speed callbacks here anymore
     elif event.data == b"crf":
         await crfcallback(event)
     elif event.data == b"fps":
         await fpscallback(event)
     elif event.data.startswith(b"crf_"):
-        # Handle old CRF callbacks
+        # Handle old CRF callbacks (consider removing if not needed)
         crf_value = event.data.decode().split("_")[1]
         await db.set_crf(crf_value)
         await event.answer(f"✅ CRF Ꮪᴇᴛ Ꭲᴏ {crf_value}")
     elif event.data.startswith(b"fps_"):
-        # Handle old FPS callbacks
+        # Handle old FPS callbacks (consider removing if not needed)
         fps_value = event.data.decode().split("_")[1]
         await db.set_fps(fps_value)
         await event.answer(f"✅ FPS Ꮪᴇᴛ Ꭲᴏ {fps_value}")
@@ -333,21 +327,25 @@ async def start_handler(event):
 
 @bot.on(events.CallbackQuery(data=b"settings"))
 async def settingscallback(event):
-    compress_button = Button.inline("⚙️ Compression Settings", data=b"main_settings")
-    upload_options = Button.inline("📤 Upload Options", data=b"upload_options")
-    back = Button.inline("Back", data=b"back_main")
+    buttons = [
+        [Button.inline("⚙️ Compression Settings", data=b"main_settings")],
+        [Button.inline("📤 Upload Options", data=b"upload_options")],
+        [Button.inline("Back", data=b"back_main")]
+    ]
     text = "**⚙️ Main Settings**"
-    await event.edit(text, buttons=[[compress_button], [upload_options], [back]])
+    await event.edit(text, buttons=buttons)
 
 
 @bot.on(events.CallbackQuery(data=b"main_settings"))
 async def main_settings_callback(event):
-    speed_button = Button.inline("⚡️ Speed", data=b"compress")
-    crf_button = Button.inline("📊 CRF", data=b"crf")
-    fps_button = Button.inline("🎬 FPS", data=b"fps")
-    back = Button.inline("Back", data=b"settings")
+    buttons = [
+        [Button.inline("⚡️ Speed", data=b"compress"),
+         Button.inline("📊 CRF", data=b"crf"),
+         Button.inline("🎬 FPS", data=b"fps")],
+        [Button.inline("Back", data=b"settings")]
+    ]
     text = "**⚙️ Compression Settings**"
-    await event.edit(text, buttons=[[speed_button, crf_button, fps_button], [back]])
+    await event.edit(text, buttons=buttons)
 
 
 @bot.on(events.CallbackQuery(data=b"upload_options"))
@@ -397,51 +395,21 @@ async def backoptionscallback(event):
 
 @bot.on(events.CallbackQuery(data=b"compress"))
 async def compresscallback(event):
-    ultrafast = Button.inline("Ultra Fast", data=b"ultrafast")
-    veryfast = Button.inline("Very Fast", data=b"veryfast")
-    faster = Button.inline("Faster", data=b"faster")
-    fast = Button.inline("Fast", data=b"fast")
-    medium = Button.inline("Medium", data=b"medium")
-    slow = Button.inline("Slow", data=b"slow")
-    back = Button.inline("Back", data=b"main_settings")
+    speeds = {"Ultra Fast": "ultrafast", "Very Fast": "veryfast", "Faster": "faster", "Fast": "fast", "Medium": "medium", "Slow": "slow"}
+    buttons = [
+        [Button.inline(name, data=f"set_speed_global:{value}".encode()) for name, value in speeds.items() if i % 2 == 0],
+        [Button.inline(name, data=f"set_speed_global:{value}".encode()) for i, (name, value) in enumerate(speeds.items()) if i % 2 != 0],
+        [Button.inline("Back", data=b"main_settings")]
+    ]
     text = "**Select Compression Speed**"
-    await event.edit(text, buttons=[[ultrafast, veryfast], [faster, fast], [medium, slow], [back]])
+    await event.edit(text, buttons=buttons)
 
 
-@bot.on(events.CallbackQuery(data=b"ultrafast"))
-async def ultrafastcallback(event):
-    await db.set_speed("ultrafast")
-    await event.answer("✅ Speed set to Ultra Fast⚡")
-
-
-@bot.on(events.CallbackQuery(data=b"veryfast"))
-async def veryfastcallback(event):
-    await db.set_speed("veryfast")
-    await event.answer("✅ Speed set to Very Fast⚡")
-
-
-@bot.on(events.CallbackQuery(data=b"faster"))
-async def fastercallback(event):
-    await db.set_speed("faster")
-    await event.answer("✅ Speed set to Faster⚡")
-
-
-@bot.on(events.CallbackQuery(data=b"fast"))
-async def fastcallback(event):
-    await db.set_speed("fast")
-    await event.answer("✅ Speed set to Fast⚡")
-
-
-@bot.on(events.CallbackQuery(data=b"medium"))
-async def mediumcallback(event):
-    await db.set_speed("medium")
-    await event.answer("✅ Speed set to Medium")
-
-
-@bot.on(events.CallbackQuery(data=b"slow"))
-async def slowcallback(event):
-    await db.set_speed("slow")
-    await event.answer("✅ Speed set to Slow")
+@bot.on(events.CallbackQuery(pattern=r"set_speed_global:(.+?)".encode()))
+async def set_global_speed_callback(event):
+    speed_value = event.pattern_match.group(1).decode()
+    await db.set_speed(speed_value)
+    await event.answer(f"✅ Speed set to {speed_value.replace('fast', ' Fast').title()}⚡")
 
 
 @bot.on(events.CallbackQuery(data=b"back_compress"))
@@ -472,19 +440,18 @@ async def fpscallback(event):
     await event.edit(text, buttons=[buttons[:3], buttons[3:], [back]])
 
 
-@bot.on(events.CallbackQuery(pattern=r"set_global_crf:(\d+)".encode()))
-async def set_global_crf_callback(event):
-    crf_value = int(event.pattern_match.group(1).decode())
-    await db.set_crf(crf_value)
-    await event.answer(f"✅ Global CRF set to {crf_value}")
+@bot.on(events.CallbackQuery(pattern=r"set_global_(crf|fps):(.+?)".encode()))
+async def set_global_setting_callback(event):
+    setting_type = event.pattern_match.group(1).decode()
+    value = event.pattern_match.group(2).decode()
 
-
-@bot.on(events.CallbackQuery(pattern=r"set_global_fps:(.+?)".encode()))
-async def set_global_fps_callback(event):
-    fps_value = event.pattern_match.group(1).decode()
-    fps = int(fps_value) if fps_value.isdigit() else None
-    await db.set_fps(fps)
-    await event.answer(f"✅ Global FPS set to {fps_value}")
+    if setting_type == "crf":
+        await db.set_crf(int(value))
+        await event.answer(f"✅ Global CRF set to {value}")
+    elif setting_type == "fps":
+        fps = int(value) if value.isdigit() else None
+        await db.set_fps(fps)
+        await event.answer(f"✅ Global FPS set to {value}")
 
 
 bot.loop.run_until_complete(db.init())
