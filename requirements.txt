@@ -12,4 +12,5 @@ Flask
 requests
 gunicorn
 tgcrypto
+yt-dlp
 https://github.com/samerastanboly/ethon/archive/refs/heads/main.zip
