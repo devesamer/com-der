@@ -1,5 +1,8 @@
-# main/__main__.py
 import logging
+
+logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
+                    level=logging.INFO)
+
 from telethon import Button
 from telethon import events
 from telethon.tl.functions.messages import EditMessageRequest
@@ -14,9 +17,6 @@ from main.database import db
 from main.client import bot
 from main.config import Config
 from main.utils import compress, get_video_info
-
-logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
-                    level=logging.WARNING)
 
 user_settings = {}
 compression_tasks = {}  # قاموس لتتبع مهام الضغط وحالة الإلغاء
