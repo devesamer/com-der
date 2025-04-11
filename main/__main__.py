@@ -7,8 +7,8 @@ from telethon.tl.custom.message import Message
 import yt_dlp
 import asyncio
 import os
-from telethon import errors, TelegramClient  # تم استيراد TelegramClient هنا (قد لا يكون مطلوبًا ولكن لا يضر)
-import telethon  # تم استيراد الوحدة telethon هنا
+from telethon import errors, TelegramClient
+import telethon
 
 from main.database import db
 from main.client import bot
@@ -327,7 +327,7 @@ async def start_compress_callback(event):
                 try:
                     db.tasks += 1
                     compression_tasks[task_id]["file_paths"].append(file_path) # تتبع مسار الملف
-                    await compress(event, file_path=file_path, task_id=task_id, **settings) # تمرير معرف المهمة
+                    await compress(event, file_path=file_path, task_id=task_id, compression_tasks=compression_tasks, **settings) # تمرير قاموس المهام
                 except Exception as e:
                     print(e)
                     await bot.edit_message(event.chat_id, initial_message.id, f"⚠️ Compression failed: {e}")
@@ -355,7 +355,7 @@ async def start_compress_callback(event):
                             return
                         try:
                             db.tasks += 1
-                            await compress(event, video_document=original_message.media.document, task_id=task_id, **settings) # تمرير معرف المهمة
+                            await compress(event, video_document=original_message.media.document, task_id=task_id, compression_tasks=compression_tasks, **settings) # تمرير قاموس المهام
                         except Exception as e:
                             print(e)
                             await bot.edit_message(event.chat_id, initial_message.id, f"⚠️ Compression failed: {e}")
