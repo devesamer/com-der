@@ -7,6 +7,7 @@ from telethon.tl.custom.message import Message
 import yt_dlp
 import asyncio
 import os
+from telethon import errors
 
 from main.database import db
 from main.client import bot
@@ -128,7 +129,10 @@ async def compression_type_callback(event):
         [Button.inline("Slow", data=f"set_speed:slow:{message_identifier}")],
         [Button.inline("Back", data=f"back_to_main:{message_identifier}")]
     ]
-    await event.edit("Select Compression Speed:", buttons=settings_keyboard)
+    try:
+        await event.edit("Select Compression Speed:", buttons=settings_keyboard)
+    except telethon.errors.rpcerrorlist.MessageNotModifiedError:
+        pass
 
 
 @bot.on(events.CallbackQuery(pattern=r"set_speed:(.+):(.+)"))
@@ -274,7 +278,10 @@ async def back_to_main_callback(event):
             [Button.inline("✨ Advanced Settings", data=f"advanced_settings:{msg_id}")],
             [Button.inline("▶️ Compress", data=f"start_compress:{msg_id}")]
         ]
-        await event.edit("Select compression settings:", buttons=settings_keyboard)
+        try:
+            await event.edit("Select compression settings:", buttons=settings_keyboard)
+        except telethon.errors.rpcerrorlist.MessageNotModifiedError:
+            pass
     else:
         await event.answer("⚠️ No video selected. Send a video first.")
 
@@ -288,7 +295,10 @@ async def back_to_advanced_callback(event):
          Button.inline("CRF", data=f"set_crf_menu:{message_identifier}")],
         [Button.inline("Back", data=f"back_to_main:{message_identifier}")]
     ]
-    await event.edit("Select Advanced Settings:", buttons=settings_keyboard)
+    try:
+        await event.edit("Select Advanced Settings:", buttons=settings_keyboard)
+    except telethon.errors.rpcerrorlist.MessageNotModifiedError:
+        pass
 
 
 @bot.on(events.CallbackQuery(pattern=r"start_compress:(url:)?(.+)"))
@@ -315,21 +325,31 @@ async def start_compress_callback(event):
             else:
                 await event.answer("⚠️ Downloaded file path not found.")
         else:
-            original_message = await bot.get_messages(event.chat_id, ids=user_settings[sender_id]["video_message_id"])
-            if original_message and original_message[0] and original_message[0].media:
-                if db.tasks >= Config.Max_Tasks:
-                    await bot.send_message(event.chat_id, f"💢 **Tʜᴇʀᴇ Aʀᴇ** {Config.Max_Tasks} **Tᴀѕᴋѕ Wᴏʀᴋɪɴɢ Nᴏᴡ**")
-                    return
-                try:
-                    db.tasks += 1
-                    await compress(event, video_document=original_message[0].media.document, **settings)
-                except Exception as e:
-                    print(e)
-                    await event.reply(f"⚠️ Compression failed: {e}")
-                finally:
-                    db.tasks -= 1
-            else:
-                await event.answer("⚠️ Original video message not found.")
+            try:
+                original_messages = await bot.get_messages(event.chat_id, ids=user_settings[sender_id]["video_message_id"])
+                if original_messages and len(original_messages) > 0:
+                    original_message = original_messages[0]
+                    if original_message and original_message.media:
+                        if db.tasks >= Config.Max_Tasks:
+                            await bot.send_message(event.chat_id, f"💢 **Tʜᴇʀᴇ Aʀᴇ** {Config.Max_Tasks} **Tᴀѕᴋѕ Wᴏʀᴋɪɴɢ Nᴏᴡ**")
+                            return
+                        try:
+                            db.tasks += 1
+                            await compress(event, video_document=original_message.media.document, **settings)
+                        except Exception as e:
+                            print(e)
+                            await event.reply(f"⚠️ Compression failed: {e}")
+                        finally:
+                            db.tasks -= 1
+                    else:
+                        await event.answer("⚠️ Original video message does not contain media.")
+                else:
+                    await event.answer("⚠️ Original video message not found.")
+            except errors.MessageIdInvalidError:
+                await event.answer("⚠️ Original video message not found (ID invalid).")
+            except Exception as e:
+                print(f"Error in start_compress_callback: {e}")
+                await event.answer("⚠️ An error occurred while trying to start compression.")
         del user_settings[sender_id]
     else:
         await event.answer("⚠️ No video selected. Send a video first.")
