@@ -4,7 +4,6 @@ import subprocess
 import asyncio
 from time import time
 from main.config import Config
-from main.__main__ import compression_tasks  # استيراد قاموس مهام الضغط
 
 async def fast_download(file_path, video_document, client, progress_callback=None):
     async for chunk in client.iter_download(video_document):
@@ -43,7 +42,7 @@ async def get_video_info(video_document, client, is_file_path=False):
         print(f"Error getting video info: {e}")
         return None
 
-async def compress(event, video_document=None, file_path=None, task_id=None, **kwargs):
+async def compress(event, video_document=None, file_path=None, task_id=None, compression_tasks=None, **kwargs):
     output_file = os.path.join(Config.OutDir, f"compressed_{time()}.mp4")
     temp_files_to_delete = [output_file]
     input_file = None
@@ -94,7 +93,7 @@ async def compress(event, video_document=None, file_path=None, task_id=None, **k
 
         while process.returncode is None:
             await asyncio.sleep(1)
-            if task_id in compression_tasks and compression_tasks[task_id]["status"] == "cancelled":
+            if compression_tasks and task_id in compression_tasks and compression_tasks[task_id]["status"] == "cancelled":
                 try:
                     process.terminate()
                 except OSError:
@@ -115,7 +114,7 @@ async def compress(event, video_document=None, file_path=None, task_id=None, **k
         await event.reply(f"⚠️ An error occurred during compression: `{e}`")
 
     finally:
-        if task_id in compression_tasks and compression_tasks[task_id]["status"] == "cancelled":
+        if compression_tasks and task_id in compression_tasks and compression_tasks[task_id]["status"] == "cancelled":
             for temp_file in temp_files_to_delete:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
