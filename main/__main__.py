@@ -85,7 +85,7 @@ async def set_speed_callback(event):
 
     if user_id in user_settings and user_settings[user_id]["video_message_id"] == video_message_id:
         user_settings[user_id]["speed"] = speed
-        await event.answer(f"Compression speed set to: {speed.replace('fast', ' Fast').title()}")
+        await event.answer(f"Compression speed set to: {speed.replace('fast', ' Fast').title()}".encode())
         await send_settings_keyboard(user_id, await bot.get_messages(event.chat_id, ids=video_message_id))
     else:
         await event.answer("Invalid operation.")
@@ -116,7 +116,7 @@ async def set_resolution_callback(event):
 
     if user_id in user_settings and user_settings[user_id]["video_message_id"] == video_message_id:
         user_settings[user_id]["resolution"] = resolution
-        await event.answer(f"Resolution set to: {resolution}")
+        await event.answer(f"Resolution set to: {resolution}".encode())
         await send_settings_keyboard(user_id, await bot.get_messages(event.chat_id, ids=video_message_id))
     else:
         await event.answer("Invalid operation.")
@@ -146,7 +146,7 @@ async def set_fps_callback(event):
 
     if user_id in user_settings and user_settings[user_id]["video_message_id"] == video_message_id:
         user_settings[user_id]["fps"] = fps_value if fps_value != "original" else None
-        await event.answer(f"FPS set to: {fps_value}")
+        await event.answer(f"FPS set to: {fps_value}".encode())
         await send_settings_keyboard(user_id, await bot.get_messages(event.chat_id, ids=video_message_id))
     else:
         await event.answer("Invalid operation.")
@@ -177,7 +177,7 @@ async def set_crf_callback(event):
 
     if user_id in user_settings and user_settings[user_id]["video_message_id"] == video_message_id:
         user_settings[user_id]["crf"] = crf_value
-        await event.answer(f"CRF set to: {crf_value}")
+        await event.answer(f"CRF set to: {crf_value}".encode())
         await send_settings_keyboard(user_id, await bot.get_messages(event.chat_id, ids=video_message_id))
     else:
         await event.answer("Invalid operation.")
@@ -201,12 +201,12 @@ async def start_compress_callback(event):
     if user_id in user_settings and user_settings[user_id]["video_message_id"] == video_message_id:
         settings = user_settings[user_id]
         if settings["speed"] is None or settings["resolution"] is None:
-            await event.answer("Please select both compression type and resolution before starting.")
+            await event.answer("Please select both compression type and resolution before starting.".encode())
             return
 
         original_message = await bot.get_messages(event.chat_id, ids=video_message_id)
         if not original_message or not original_message.media:
-            await event.answer("Original video not found.")
+            await event.answer("Original video not found.".encode())
             return
 
         try:
@@ -218,71 +218,71 @@ async def start_compress_callback(event):
             logging.info("Compression process initiated.")
         except Exception as e:
             logging.error(f"Error during compression initiation: {e}")
-            await bot.send_message(event.chat_id, "An error occurred during video compression.")
+            await bot.send_message(event.chat_id, "An error occurred during video compression.".encode())
         finally:
             db.tasks -= 1
             if user_id in user_settings:
                 del user_settings[user_id]
             logging.info(f"User settings for {user_id} cleared.")
     else:
-        await event.answer("Invalid operation or settings expired.")
+        await event.answer("Invalid operation or settings expired.".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/as_video", from_users=Config.WhiteList))
 async def as_video(event):
     await db.set_upload_mode(doc=False)
-    await bot.send_message(event.chat_id, "✅ **I Wɪʟʟ Uᴘʟᴏᴀᴅ Tʜᴇ Fɪʟᴇѕ Aѕ Vɪᴅᴇᴏѕ**")
+    await bot.send_message(event.chat_id, "✅ **I Wɪʟʟ Uᴘʟᴏᴀᴅ Tʜᴇ Fɪʟᴇѕ Aѕ Vɪᴅᴇᴏѕ**".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/as_document", from_users=Config.WhiteList))
 async def as_document(event):
     await db.set_upload_mode(doc=True)
-    await bot.send_message(event.chat_id, "✅ **I Wɪʟʟ Uᴘʟᴏᴀᴅ Tʜᴇ Fɪʟᴇѕ Aѕ Dᴏᴄᴜᴍᴇɴᴛѕ**")
+    await bot.send_message(event.chat_id, "✅ **I Wɪʟʟ Uᴘʟᴏᴀᴅ Tʜᴇ Fɪʟᴇѕ Aѕ Dᴏᴄᴜᴍᴇɴᴛѕ**".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/speed", from_users=Config.WhiteList))
 async def set_speed_command(event):
-    await bot.send_message(event.chat_id, "Use the settings menu after sending a video to select compression speed.")
+    await bot.send_message(event.chat_id, "Use the settings menu after sending a video to select compression speed.".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/crf", from_users=Config.WhiteList))
 async def set_crf_command(event):
-    await bot.send_message(event.chat_id, "Use the settings menu after sending a video to select CRF.")
+    await bot.send_message(event.chat_id, "Use the settings menu after sending a video to select CRF.".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/fps", from_users=Config.WhiteList))
 async def set_fps_command(event):
-    await bot.send_message(event.chat_id, "Use the settings menu after sending a video to select FPS.")
+    await bot.send_message(event.chat_id, "Use the settings menu after sending a video to select FPS.".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, func=lambda e: e.photo, from_users=Config.WhiteList))
 async def set_thumb(event):
     await bot.download_media(event.message, Config.Thumb)
     await db.set_thumb(original=False)
-    await event.reply("✅ **Tʜᴜᴍʙɴᴀɪʟ Cʜᴀɴɢᴇᴅ**")
+    await event.reply("✅ **Tʜᴜᴍʙɴᴀɪʟ Cʜᴀɴɢᴇᴅ**".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/original_thumb", from_users=Config.WhiteList))
 async def original_thumb(event):
     await db.set_thumb(original=True)
-    await event.reply("✅ **ɪ Wɪʟʟ Uѕᴇ Oʀɪɢɪɴᴀʟ Tʜᴜᴍʙɴᴀɪʟ**")
+    await event.reply("✅ **ɪ Wɪʟʟ Uѕᴇ Oʀɪɢɪɴᴀʟ Tʜᴜᴍʙɴᴀɪʟ**".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/original_fps", from_users=Config.WhiteList))
 async def original_fps(event):
     await db.set_fps(None)
-    await event.reply("✅ **I Wɪʟʟ Uѕᴇ Oʀɪɢɪɴᴀʟ FPS**")
+    await event.reply("✅ **I Wɪʟʟ Uѕᴇ Oʀɪɢɪɴᴀʟ FPS**".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/commands", from_users=Config.WhiteList))
 async def commands(event):
-    await event.reply("🤖 **Vɪᴅᴇᴏ Cᴏᴍᴘʀᴇѕѕɪᴏɴ Sᴇᴛᴛɪɴɢѕ**:\n\nSend a video to access the settings menu.")
+    await event.reply("🤖 **Vɪᴅᴇᴏ Cᴏᴍᴘʀᴇѕѕɪᴏɴ Sᴇᴛᴛɪɴɢѕ**:\n\nSend a video to access the settings menu.".encode())
 
 
 @bot.on(events.CallbackQuery())
 async def callback_handler(event):
     if event.sender_id not in Config.WhiteList:
-        await event.answer("⛔️ Ꮪᴏʀʀʏ, Ꭲʜɪѕ Ᏼᴏᴛ Fᴏʀ Ꮲᴇʀѕᴏɴᴀʟ Uѕᴇ !! ⛔️")
+        await event.answer("⛔️ Ꮪᴏʀʀʏ, Ꭲʜɪѕ Ᏼᴏᴛ Fᴏʀ Ꮲᴇʀѕᴏɴᴀʟ Uѕᴇ !! ⛔️".encode())
         return
     # Existing callback handlers for settings menu
     if event.data == b"settings":
@@ -306,22 +306,22 @@ async def callback_handler(event):
         # Handle old CRF callbacks (consider removing if not needed)
         crf_value = event.data.decode().split("_")[1]
         await db.set_crf(crf_value)
-        await event.answer(f"✅ CRF Ꮪᴇᴛ Ꭲᴏ {crf_value}")
+        await event.answer(f"✅ CRF Ꮪᴇᴛ Ꭲᴏ {crf_value}".encode())
     elif event.data.startswith(b"fps_"):
         # Handle old FPS callbacks (consider removing if not needed)
         fps_value = event.data.decode().split("_")[1]
         await db.set_fps(fps_value)
-        await event.answer(f"✅ FPS Ꮪᴇᴛ Ꭲᴏ {fps_value}")
+        await event.answer(f"✅ FPS Ꮪᴇᴛ Ꭲᴏ {fps_value}".encode())
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/start"))
 async def start_handler(event):
     if event.sender_id not in Config.WhiteList:
-        await event.reply("Ꮪᴏʀʀʏ, Ꭲʜɪѕ Ᏼᴏᴛ Fᴏʀ Ꮲᴇʀѕᴏɴᴀʟ Uѕᴇ\n\n**Yᴏᴜ Aʀᴇ Nᴏᴛ Aᴜᴛʜᴏʀɪᴢᴇᴅ Tᴏ Uѕᴇ Tʜɪѕ Bᴏᴛ!!**⛔️")
+        await event.reply("Ꮪᴏʀʀʏ, Ꭲʜɪѕ Ᏼᴏᴛ Fᴏʀ Ꮲᴇʀѕᴏɴᴀʟ Uѕᴇ\n\n**Yᴏᴜ Aʀᴇ Nᴏᴛ Aᴜᴛʜᴏʀɪᴢᴇᴅ Tᴏ Uѕᴇ Tʜɪѕ Bᴏᴛ!!**⛔️".encode())
         return
     settings = Button.inline("⚙ Sᴇᴛᴛɪɴgs", data="settings")
     developer = Button.url("Ꭰᴇᴠᴇʟᴏᴘᴇʀ 💫", url="https://t.me/A7_SYR")
-    text = "Sᴇɴᴅ Mᴇ Aɴʏ Vɪᴅᴇᴏ Tᴏ Cᴏᴍᴘʀᴇѕѕ\n\nᏟʟɪᴄᴋ Ᏼᴜᴛᴛᴏɴ ⚙ Sᴇᴛᴛɪɴgs"
+    text = "Sᴇɴᴅ Mᴇ Aɴʏ Vɪᴅᴇᴏ Tᴏ Cᴏᴍᴘʀᴇѕѕ\n\nᏟʟɪᴄᴋ Ᏼᴜᴛᴛᴏɴ ⚙ Sᴇᴛᴛɪɴgs".encode()
     await event.reply(text, buttons=[[settings, developer]])
 
 
@@ -332,7 +332,7 @@ async def settingscallback(event):
         [Button.inline("📤 Upload Options", data=b"upload_options")],
         [Button.inline("Back", data=b"back_main")]
     ]
-    text = "**⚙️ Main Settings**"
+    text = "**⚙️ Main Settings**".encode()
     await event.edit(text, buttons=buttons)
 
 
@@ -344,7 +344,7 @@ async def main_settings_callback(event):
          Button.inline("🎬 FPS", data=b"fps")],
         [Button.inline("Back", data=b"settings")]
     ]
-    text = "**⚙️ Compression Settings**"
+    text = "**⚙️ Compression Settings**".encode()
     await event.edit(text, buttons=buttons)
 
 
@@ -355,32 +355,32 @@ async def upload_options_callback(event):
     original_thumb_button = Button.inline("🖼️ Original Thumbnail", data=b"original_thumb")
     change_thumb_button = Button.inline("📸 Change Thumbnail", data=b"change_thumb")
     back = Button.inline("Back", data=b"settings")
-    text = "**📤 Upload Options**"
-    await event.edit(text, buttons=[[as_video_button, as_document_button], [original_thumb_button, change_thumb_button], [back]])
+    text = "**📤 Upload Options**".encode()
+    await event.edit(text, buttons=buttons)
 
 
 @bot.on(events.CallbackQuery(data=b"set_upload_video"))
 async def set_upload_video_callback(event):
     await db.set_upload_mode(doc=False)
-    await event.answer("✅ Upload mode set to Video.")
+    await event.answer("✅ Upload mode set to Video.".encode())
 
 
 @bot.on(events.CallbackQuery(data=b"set_upload_document"))
 async def set_upload_document_callback(event):
     await db.set_upload_mode(doc=True)
-    await event.answer("✅ Upload mode set to Document.")
+    await event.answer("✅ Upload mode set to Document.".encode())
 
 
 @bot.on(events.CallbackQuery(data=b"change_thumb"))
 async def change_thumb_callback(event):
-    await event.answer("🖼️ Send me a photo to set as thumbnail.")
+    await event.answer("🖼️ Send me a photo to set as thumbnail.".encode())
 
 
 @bot.on(events.CallbackQuery(data=b"back_main"))
 async def back_main_callback(event):
     settings = Button.inline("⚙ Sᴇᴛᴛɪɴgs", data=b"settings")
     developer = Button.url("Ꭰᴇᴠᴇʟᴏᴘᴇʀ 💫", url="https://t.me/A7_SYR")
-    text = "**Sᴇɴᴅ Mᴇ Aɴʏ Vɪᴅᴇᴏ Tᴏ Cᴏᴍᴘʀᴇѕѕ**\n\nᏟʟɪᴄᴋ Ᏼᴜᴛᴛᴏɴ **⚙ Sᴇᴛᴛɪɴgs**\n\nᏴᴇғᴏʀᴇ Ꮪᴇɴᴅɪɴɢ Ꭲʜᴇ Ꮩɪᴅᴇᴏ ғᴏʀ Ꮯᴏᴍᴘʀᴇѕѕɪᴏɴ\n👇"
+    text = "**Sᴇɴᴅ Mᴇ Aɴʏ Vɪᴅᴇᴏ Tᴏ Cᴏᴍᴘʀᴇѕѕ**\n\nᏟʟɪᴄᴋ Ᏼᴜᴛᴛᴏɴ **⚙ Sᴇᴛᴛɪɴgs**\n\nᏴᴇғᴏʀᴇ Ꮪᴇɴᴅɪɴɢ Ꭲʜᴇ Ꮩɪᴅᴇᴏ ғᴏʀ Ꮯᴏᴍᴘʀᴇѕѕɪᴏɴ\n👇".encode()
     await event.edit(text, buttons=[[settings, developer]])
 
 
@@ -389,7 +389,7 @@ async def backoptionscallback(event):
     compress_button = Button.inline("⚙️ Compression Settings", data=b"main_settings")
     upload_options = Button.inline("📤 Upload Options", data=b"upload_options")
     back = Button.inline("Back", data=b"back_main")
-    text = "**⚙️ Main Settings**"
+    text = "**⚙️ Main Settings**".encode()
     await event.edit(text, buttons=[[compress_button], [upload_options], [back]])
 
 
@@ -401,7 +401,7 @@ async def compresscallback(event):
         [Button.inline(name, data=f"set_speed_global:{value}".encode()) for i, (name, value) in enumerate(speeds.items()) if i % 2 != 0],
         [Button.inline("Back", data=b"main_settings")]
     ]
-    text = "**Select Compression Speed**"
+    text = "**Select Compression Speed**".encode()
     await event.edit(text, buttons=buttons)
 
 
@@ -409,7 +409,7 @@ async def compresscallback(event):
 async def set_global_speed_callback(event):
     speed_value = event.pattern_match.group(1).decode()
     await db.set_speed(speed_value)
-    await event.answer(f"✅ Speed set to {speed_value.replace('fast', ' Fast').title()}⚡")
+    await event.answer(f"✅ Speed set to {speed_value.replace('fast', ' Fast').title()}⚡".encode())
 
 
 @bot.on(events.CallbackQuery(data=b"back_compress"))
@@ -418,7 +418,7 @@ async def backcompresscallback(event):
     crf_button = Button.inline("📊 CRF", data=b"crf")
     fps_button = Button.inline("🎬 FPS", data=b"fps")
     back = Button.inline("Back", data=b"settings")
-    text = "**⚙️ Compression Settings**"
+    text = "**⚙️ Compression Settings**".encode()
     await event.edit(text, buttons=[[compress_button, crf_button, fps_button], [back]])
 
 
@@ -427,7 +427,7 @@ async def crfcallback(event):
     crf_values = [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
     buttons = [Button.inline(str(val), data=f"set_global_crf:{val}".encode()) for val in crf_values]
     back = Button.inline("Back", data=b"main_settings")
-    text = "**Select Compression Ratio (CRF)**\nLower values mean higher quality."
+    text = "**Select Compression Ratio (CRF)**\nLower values mean higher quality.".encode()
     await event.edit(text, buttons=[buttons[:3], buttons[3:6], buttons[6:9], buttons[9:], [back]])
 
 
@@ -436,7 +436,7 @@ async def fpscallback(event):
     fps_values = ["Original", 24, 25, 30, 45, 60]
     buttons = [Button.inline(str(val), data=f"set_global_fps:{val}".encode()) for val in fps_values]
     back = Button.inline("Back", data=b"main_settings")
-    text = "**Select Frames Per Second (FPS)**"
+    text = "**Select Frames Per Second (FPS)**".encode()
     await event.edit(text, buttons=[buttons[:3], buttons[3:], [back]])
 
 
@@ -447,11 +447,11 @@ async def set_global_setting_callback(event):
 
     if setting_type == "crf":
         await db.set_crf(int(value))
-        await event.answer(f"✅ Global CRF set to {value}")
+        await event.answer(f"✅ Global CRF set to {value}".encode())
     elif setting_type == "fps":
         fps = int(value) if value.isdigit() else None
         await db.set_fps(fps)
-        await event.answer(f"✅ Global FPS set to {value}")
+        await event.answer(f"✅ Global FPS set to {value}".encode())
 
 
 bot.loop.run_until_complete(db.init())
