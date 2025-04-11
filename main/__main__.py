@@ -31,25 +31,25 @@ async def main_handler(event: events.NewMessage.Event):
     # Handle video uploads
     if event.media and hasattr(msg.media, "document") and 'video' in msg.media.document.mime_type:
         video_info = await get_video_info(msg.media.document, bot)
-        if video_info:
-            codec = video_info.get('codec', 'N/A')
-            width = video_info.get('width', 'N/A')
-            height = video_info.get('height', 'N/A')
+        codec = video_info.get('codec', 'N/A') if video_info else 'N/A'
+        width = video_info.get('width', 'N/A') if video_info else 'N/A'
+        height = video_info.get('height', 'N/A') if video_info else 'N/A'
+        info_message = ""
+        if not video_info:
+            info_message = "⚠️ Could not retrieve complete video information.\n\n"
 
-            settings_keyboard = [
-                [Button.inline("⚙️ Compression Type", data=f"compression_type:{msg.id}"),
-                 Button.inline("📏 Resolution", data=f"resolution:{msg.id}")],
-                [Button.inline("✨ Advanced Settings", data=f"advanced_settings:{msg.id}")],
-                [Button.inline("▶️ Compress", data=f"start_compress:{msg.id}")]
-            ]
-            await event.reply(
-                f"**Video Information:**\nCodec: `{codec}`\nResolution: `{width}x{height}`\n\nSelect compression settings:",
-                buttons=settings_keyboard,
-                reply_to=msg.id
-            )
-            user_settings[sender_id] = {"video_message_id": msg.id, "settings": {}}
-        else:
-            await event.reply("⚠️ Could not retrieve video information.")
+        settings_keyboard = [
+            [Button.inline("⚙️ Compression Type", data=f"compression_type:{msg.id}"),
+             Button.inline("📏 Resolution", data=f"resolution:{msg.id}")],
+            [Button.inline("✨ Advanced Settings", data=f"advanced_settings:{msg.id}")],
+            [Button.inline("▶️ Compress", data=f"start_compress:{msg.id}")]
+        ]
+        await event.reply(
+            f"{info_message}**Video Information:**\nCodec: `{codec}`\nResolution: `{width}x{height}`\n\nSelect compression settings:",
+            buttons=settings_keyboard,
+            reply_to=msg.id
+        )
+        user_settings[sender_id] = {"video_message_id": msg.id, "settings": {}}
         return
 
     # Handle URLs
@@ -88,24 +88,24 @@ async def download_and_process_url(event, url):
                 dummy_msg = DummyMessage(chat_id, file_path)
 
                 video_info = await get_video_info(file_path, bot, is_file_path=True)
-                if video_info:
-                    codec = video_info.get('codec', 'N/A')
-                    width = video_info.get('width', 'N/A')
-                    height = video_info.get('height', 'N/A')
+                codec = video_info.get('codec', 'N/A') if video_info else 'N/A'
+                width = video_info.get('width', 'N/A') if video_info else 'N/A'
+                height = video_info.get('height', 'N/A') if video_info else 'N/A'
+                info_message = ""
+                if not video_info:
+                    info_message = "⚠️ Could not retrieve complete video information.\n\n"
 
-                    settings_keyboard = [
-                        [Button.inline("⚙️ Compression Type", data=f"compression_type:url:{url}"),
-                         Button.inline("📏 Resolution", data=f"resolution:url:{url}")],
-                        [Button.inline("✨ Advanced Settings", data=f"advanced_settings:url:{url}")],
-                        [Button.inline("▶️ Compress", data=f"start_compress:url:{url}")]
-                    ]
-                    await event.reply(
-                        f"**Downloaded Video Information:**\nCodec: `{codec}`\nResolution: `{width}x{height}`\n\nSelect compression settings:",
-                        buttons=settings_keyboard
-                    )
-                    user_settings[sender_id] = {"url": url, "file_path": file_path, "settings": {}}
-                else:
-                    await event.reply("⚠️ Could not retrieve video information for downloaded URL.")
+                settings_keyboard = [
+                    [Button.inline("⚙️ Compression Type", data=f"compression_type:url:{url}"),
+                     Button.inline("📏 Resolution", data=f"resolution:url:{url}")],
+                    [Button.inline("✨ Advanced Settings", data=f"advanced_settings:url:{url}")],
+                    [Button.inline("▶️ Compress", data=f"start_compress:url:{url}")]
+                ]
+                await event.reply(
+                    f"{info_message}**Downloaded Video Information:**\nCodec: `{codec}`\nResolution: `{width}x{height}`\n\nSelect compression settings:",
+                    buttons=settings_keyboard
+                )
+                user_settings[sender_id] = {"url": url, "file_path": file_path, "settings": {}}
             else:
                 await event.reply("⚠️ Could not find video information for the provided URL.")
 
@@ -385,7 +385,7 @@ async def set_fps_command(event):
 async def set_thumb(event):
     await bot.download_media(event.message, Config.Thumb)
     await db.set_thumb(original=False)
-    await event.reply("✅ **Tʜᴜᴍʙɴᴀɪʟ Cʜᴀɴɢᴇᴅ**")
+    await event.reply("✅ **Tʜᴜᴍʙɴᴀɪʟ CʜᴀɴɢᴇD**")
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/original_thumb", from_users=Config.WhiteList))
@@ -421,7 +421,7 @@ async def callback_handler(event):
 @bot.on(events.NewMessage(incoming=True, pattern="/start"))
 async def start_handler(event):
     if event.sender_id not in Config.WhiteList:
-        await event.reply("Ꮪᴏʀʀʏ, Ꭲʜɪѕ Ᏼᴏᴛ Fᴏʀ Ꮲᴇʀѕᴏɴᴀʟ Uѕᴇ\n\n**Yᴏᴜ Aʀᴇ Nᴏᴛ Aᴜᴛʜᴏʀɪᴢᴇᴅ Tᴏ Uѕᴇ Tʜɪѕ Bᴏᴛ!!**⛔️")
+        await event.reply("Ꮪᴏʀʀʏ, Ꭲʜɪѕ Ᏼᴏᴛ Fᴏʀ Ꮲᴇʀѕᴏɴᴀʟ Uѕᴇ\n\n**Yᴏᴜ Aʀᴇ Nᴏᴛ Aᴜᴛʜᴏʀɪᴢᴇᴅ Tᴏ Uѕᴇ Tʜɪѕ Ᏼᴏᴛ!!**⛔️")
         return
     settings = Button.inline("⚙ Sᴇᴛᴛɪɴɢs", data="settings")
     developer = Button.url("Ꭰᴇᴠᴇʟᴏᴘᴇʀ 💫", url="https://t.me/A7_SYR")
@@ -444,13 +444,12 @@ async def new_settings_callback(event):
 
 @bot.on(events.CallbackQuery(data="back_start"))
 async def back_start_callback(event):
-    settings = Button.inline("⚙ Sᴇᴛᴛɪɴɢs", data="settings")
+    settings = Button.inline("⚙ Sᴇᴛᴛɪɴgs", data="settings")
     developer = Button.url("Ꭰᴇᴠᴇʟᴏᴘᴇʀ 💫", url="https://t.me/A7_SYR")
-    text = "Sᴇɴᴅ Mᴇ Aɴʏ Vɪᴅᴇᴏ Tᴏ Cᴏᴍᴘʀᴇѕѕ\n\nᏟʟɪᴄᴋ Ᏼᴜᴛᴛᴏɴ **⚙ Sᴇᴛᴛɪɴɢѕ**\n\nᏴᴇғᴏʀᴇ Ꮪᴇɴᴅɪɴɢ Ꭲʜᴇ Ꮩɪᴅᴇᴏ ғᴏʀ Ꮯᴏᴍᴘʀᴇѕѕɪᴏɴ\n👇"
+    text = "Sᴇɴᴅ Mᴇ Aɴʏ Vɪᴅᴇᴏ Tᴏ Cᴏᴍᴘʀᴇѕѕ\n\nᏟʟɪᴄᴋ Ᏼᴜᴛᴛᴏɴ **⚙ Sᴇᴛᴛɪɴgs**\n\nᏴᴇғᴏʀᴇ Ꮪᴇɴᴅɪɴɢ Ꭲʜᴇ Ꮩɪᴅᴇᴏ ғᴏʀ Ꮯᴏᴍᴘʀᴇѕѕɪᴏɴ\n👇"
     await event.edit(text, buttons=[[settings, developer]])
 
 
 bot.loop.run_until_complete(db.init())
 print("Bot-Started")
 bot.run_until_disconnected()
-
