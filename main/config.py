@@ -1,3 +1,5 @@
+# main/config.py
+
 import os
 
 
@@ -12,3 +14,4 @@ class Config:
     Thumb = "Thumb.jpg"
     InDir = "IN"
     OutDir = "OUT"
+
