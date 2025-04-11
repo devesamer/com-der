@@ -7,7 +7,8 @@ from telethon.tl.custom.message import Message
 import yt_dlp
 import asyncio
 import os
-from telethon import errors
+from telethon import errors, TelegramClient  # تم استيراد TelegramClient هنا (قد لا يكون مطلوبًا ولكن لا يضر)
+import telethon  # تم استيراد الوحدة telethon هنا
 
 from main.database import db
 from main.client import bot
@@ -17,7 +18,8 @@ from main.utils import compress, get_video_info
 logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
                     level=logging.WARNING)
 
-user_settings = {}  # Dictionary to store user-specific settings temporarily
+user_settings = {}
+compression_tasks = {}  # قاموس لتتبع مهام الضغط وحالة الإلغاء
 
 
 @bot.on(events.NewMessage(incoming=True, from_users=Config.WhiteList))
@@ -309,21 +311,37 @@ async def start_compress_callback(event):
 
     if sender_id in user_settings:
         settings = user_settings[sender_id]["settings"]
+        initial_message = await event.reply("🔄 **Compression started...**")
+        cancel_button = [Button.inline("❌ Cancel Compression", data=f"cancel_compress:{initial_message.id}")]
+        try:
+            await bot.edit_message(event.chat_id, initial_message.id, "🔄 **Compression started...**", buttons=cancel_button)
+        except errors.MessageNotModifiedError:
+            pass
+
+        task_id = initial_message.id  # استخدام معرف الرسالة كمعرف للمهمة
+        compression_tasks[task_id] = {"status": "running", "sender_id": sender_id, "file_paths": []} # تتبع المهمة
+
         if is_url:
             file_path = user_settings[sender_id].get("file_path")
             if file_path:
                 try:
                     db.tasks += 1
-                    await compress(event, file_path=file_path, **settings)
+                    compression_tasks[task_id]["file_paths"].append(file_path) # تتبع مسار الملف
+                    await compress(event, file_path=file_path, task_id=task_id, **settings) # تمرير معرف المهمة
                 except Exception as e:
                     print(e)
-                    await event.reply(f"⚠️ Compression failed: {e}")
+                    await bot.edit_message(event.chat_id, initial_message.id, f"⚠️ Compression failed: {e}")
+                    compression_tasks[task_id]["status"] = "failed"
                 finally:
                     db.tasks -= 1
-                    if os.path.exists(file_path):
+                    if task_id in compression_tasks and compression_tasks[task_id]["status"] != "cancelled" and os.path.exists(file_path):
                         os.remove(file_path)
+                    if task_id in compression_tasks:
+                        del compression_tasks[task_id]
             else:
                 await event.answer("⚠️ Downloaded file path not found.")
+                if task_id in compression_tasks:
+                    del compression_tasks[task_id]
         else:
             try:
                 original_messages = await bot.get_messages(event.chat_id, ids=user_settings[sender_id]["video_message_id"])
@@ -331,28 +349,64 @@ async def start_compress_callback(event):
                     original_message = original_messages[0]
                     if original_message and original_message.media:
                         if db.tasks >= Config.Max_Tasks:
-                            await bot.send_message(event.chat_id, f"💢 **Tʜᴇʀᴇ Aʀᴇ** {Config.Max_Tasks} **Tᴀѕᴋѕ Wᴏʀᴋɪɴɢ Nᴏᴡ**")
+                            await bot.edit_message(event.chat_id, initial_message.id, f"💢 **Tʜᴇʀᴇ Aʀᴇ** {Config.Max_Tasks} **Tᴀѕᴋѕ Wᴏʀᴋɪɴɢ Nᴏᴡ**")
+                            if task_id in compression_tasks:
+                                del compression_tasks[task_id]
                             return
                         try:
                             db.tasks += 1
-                            await compress(event, video_document=original_message.media.document, **settings)
+                            await compress(event, video_document=original_message.media.document, task_id=task_id, **settings) # تمرير معرف المهمة
                         except Exception as e:
                             print(e)
-                            await event.reply(f"⚠️ Compression failed: {e}")
+                            await bot.edit_message(event.chat_id, initial_message.id, f"⚠️ Compression failed: {e}")
+                            compression_tasks[task_id]["status"] = "failed"
                         finally:
                             db.tasks -= 1
+                            if task_id in compression_tasks and compression_tasks[task_id]["status"] == "running":
+                                await bot.edit_message(event.chat_id, initial_message.id, "✅ **Compression finished.**")
+                            if task_id in compression_tasks:
+                                del compression_tasks[task_id]
                     else:
                         await event.answer("⚠️ Original video message does not contain media.")
+                        if task_id in compression_tasks:
+                            del compression_tasks[task_id]
                 else:
                     await event.answer("⚠️ Original video message not found.")
+                    if task_id in compression_tasks:
+                        del compression_tasks[task_id]
             except errors.MessageIdInvalidError:
                 await event.answer("⚠️ Original video message not found (ID invalid).")
+                if task_id in compression_tasks:
+                    del compression_tasks[task_id]
             except Exception as e:
                 print(f"Error in start_compress_callback: {e}")
                 await event.answer("⚠️ An error occurred while trying to start compression.")
-        del user_settings[sender_id]
+                if task_id in compression_tasks:
+                    del compression_tasks[task_id]
+        if sender_id in user_settings:
+            del user_settings[sender_id]
     else:
         await event.answer("⚠️ No video selected. Send a video first.")
+
+
+@bot.on(events.CallbackQuery(pattern=r"cancel_compress:(\d+)"))
+async def cancel_compress_callback(event):
+    task_id = int(event.pattern_match.group(1))
+    sender_id = event.sender_id
+    if task_id in compression_tasks and compression_tasks[task_id]["sender_id"] == sender_id:
+        compression_tasks[task_id]["status"] = "cancelled"
+        file_paths_to_delete = compression_tasks[task_id].get("file_paths", [])
+        for file_path in file_paths_to_delete:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        try:
+            await bot.edit_message(event.chat_id, task_id, "❌ **Compression cancelled by user.**")
+        except errors.MessageNotModifiedError:
+            pass
+        del compression_tasks[task_id]
+        await event.answer("Compression cancelled.")
+    else:
+        await event.answer("⚠️ This compression task cannot be cancelled.")
 
 
 @bot.on(events.NewMessage(incoming=True, pattern="/as_video", from_users=Config.WhiteList))
