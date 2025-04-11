@@ -1,4 +1,8 @@
-# main/utils.py
+import logging
+
+logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
+                    level=logging.INFO)
+
 import os
 import subprocess
 import asyncio
