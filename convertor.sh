@@ -1,2 +1,2 @@
 echo "starting VideoCompressor ~@VIDEO_COMPRESS_BOT";
-python3 -m main
+gunicorn app:app & python3 -m main
