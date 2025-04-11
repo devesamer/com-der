@@ -280,7 +280,8 @@ async def callback_handler(event):
         return
     # Existing callback handlers for settings menu
     if event.data == b"settings":
-        await settings_handler(event)
+        # await settings_handler(event)
+        await settingscallback(event)
     elif event.data == b"compress":
         await compresscallback(event)
     elif event.data == b"options":
